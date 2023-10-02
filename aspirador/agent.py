@@ -52,9 +52,10 @@ class AspiradorTaula(Aspirador):
 
 class AspiradorReflex(Aspirador):
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio:
-        """ IMPLEMENTAR """
+        print("aspirador reflex")
 
 
 class AspiradorMemoria(Aspirador):
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio:
-        """ IMPLEMENTAR """
+        print(percepcio)
+        return AccionsAspirador.ASPIRA
