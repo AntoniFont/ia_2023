@@ -1,5 +1,6 @@
 import sys
 sys.path.append("C:\\Users\\Toniuni\\Desktop\\Curso 23-24\\IA\\ia_2023")
+sys.path.append("C:\\Users\\marij\\Desktop\\IA")
 from aspirador import agent, joc
 
 

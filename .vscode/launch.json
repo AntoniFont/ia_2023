@@ -8,10 +8,10 @@
             "name": "Python: Debug project",
             "type": "python",
             "request": "launch",
-            "program": "C:\\Users\\Toniuni\\Desktop\\Curso 23-24\\IA\\ia_2023\\aspirador\\__main__.py",
+            "program": "C:\\Users\\marij\\Desktop\\IA\\aspirador\\__main__.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "python": "C:\\Users\\Toniuni\\miniconda3\\envs\\ia2023\\python.exe",
+            "python": "C:\\Users\\marij\\miniconda3\\envs\\ia2023\\python.exe",
             "cwd": "${fileDirname}"
         },
         {
@@ -21,7 +21,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "python": "C:\\Users\\Toniuni\\miniconda3\\envs\\ia2023\\python.exe"
+            "python": "C:\\Users\\marij\\miniconda3\\envs\\ia2023\\python.exe"
         }
 
 
