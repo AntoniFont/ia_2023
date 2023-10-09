@@ -20,13 +20,12 @@ from quiques.entorn import SENSOR, Lloc
 
 MAX_ANIMALS = 3
 
-
 class Barca(agent.Agent):
     def __init__(self):
         super().__init__(long_memoria=1)
 
     def pinta(self, display):
-        print(self._posicio_pintar)
+        print(self._posiccio_pintar)
 
     @abc.abstractmethod
     def actua(self, percep: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:
