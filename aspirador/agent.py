@@ -57,5 +57,6 @@ class AspiradorReflex(Aspirador):
 
 class AspiradorMemoria(Aspirador):
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio:
-        print(percepcio)
+        #self.get_memoria()
+        #percepcio[Sensor.LLOC]
         return AccionsAspirador.ASPIRA
