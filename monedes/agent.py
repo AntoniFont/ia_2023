@@ -7,6 +7,7 @@ Solució:
 """
 
 from ia_2022 import agent, entorn
+from monedes.entorn import AccionsMoneda, SENSOR
 
 SOLUCIO = " XXXC"
 

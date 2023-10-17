@@ -57,6 +57,25 @@ class AspiradorReflex(Aspirador):
 
 class AspiradorMemoria(Aspirador):
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio:
-        #self.get_memoria()
-        #percepcio[Sensor.LLOC]
-        return AccionsAspirador.ASPIRA
+        memoria = self.get_memoria(1)
+
+        if memoria is None:
+            memoria = {
+                Localitzacio.HABITACIO_ESQ: False,
+                Localitzacio.HABITACIO_DRET: False,
+            }
+
+        if percepcio[Sensor.ESTAT] == EstatHabitacio.BRUT:
+            return AccionsAspirador.ASPIRA
+
+        memoria[percepcio[Sensor.LLOC]] = True
+
+        self.set_memoria(memoria)
+
+        if memoria[Localitzacio.HABITACIO_ESQ] and memoria[Localitzacio.HABITACIO_DRET]:
+            return AccionsAspirador.ATURA
+
+        if percepcio[Sensor.LLOC] == Localitzacio.HABITACIO_ESQ:
+            return AccionsAspirador.DRETA
+        else:
+            return AccionsAspirador.ESQUERRA

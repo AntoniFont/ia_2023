@@ -1,6 +1,6 @@
 from ia_2022 import entorn
 from quiques.agent import Barca, Estat
-from quiques.entorn import AccionsBarca, SENSOR
+from quiques.entorn import SENSOR
 
 
 class BarcaAmplada(Barca):
@@ -12,6 +12,9 @@ class BarcaAmplada(Barca):
         self.primeraExecucio = True
                         
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:
+        estat = Estat(local_barca=percepcio[SENSOR.LLOC], polls_esq=percepcio[SENSOR.QUICA_ESQ],
+                      llops_esq=percepcio[SENSOR.LLOP_ESQ])
+
         if(self.primeraExecucio):
             self.primeraExecucio = False
             estatActual = Estat(percepcio[SENSOR.LLOC],percepcio[SENSOR.LLOP_ESQ],percepcio[SENSOR.QUICA_ESQ])
