@@ -48,7 +48,6 @@ class EstatProfunditat():
                     if(self.estaOcupat(fila +1,columna -1) and self.estaOcupat(fila+2, columna -2) and self.estaOcupat(fila+3,columna -3)):
                         return True
         return False         
-
     def estaOcupat(self,fila,columna):
         #Suposam que el tauler es sempre un quadrat
         if fila < 0 or columna < 0 or fila > len(self.tauler) or columna > len(self.tauler):

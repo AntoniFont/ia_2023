@@ -4,137 +4,249 @@ ClauPercepcio:
     OLOR = 1
     PARETS = 2
 """
-from typing import List, Optional, Tuple
-from queue import PriorityQueue
+import copy
+from typing import Tuple
 from ia_2022 import entorn
 from practica1 import joc
-from practica1.entorn import Accio, SENSOR, TipusCasella
+from practica1.entorn import TipusCasella
 
-# Definim un tipus per la colocació de una peça
-TipusPosarPesa = Tuple[Accio, Tuple[int, int]]
+class Estat:
 
-class Estat:   
+    def __init__(self, taulell, pare=None, accions_previes=None, alpha=-float('inf'), beta=float('inf')):
+        self.tauler = taulell
+        self.pare = pare
 
-    def __init__(
-        self,
-        taulell: List[List[TipusCasella]],
-        tipus: TipusCasella,
-        n: int,
-        pare: Optional["Estat"] = None,
-        accions_previes: Optional[List[TipusPosarPesa]] = None,
-    ) -> None:
-        self._taulell = taulell
-        self._n = n
-        self._tipus = tipus
-        self._pare = pare
-        self._accions_previes = accions_previes or []
-        self._acc_pos = [
-            (Accio.POSAR, (row, col)) for row in range(n) for col in range(n)
-        ]
+        self.pes = 0
+        self.heuristica = 0
 
-    def __hash__(self) -> int:
-        return hash(str(self))
+        self.alpha = alpha
+        self.beta = beta
+        self.valor = 0
 
-    def __eq__(self, other: "Estat") -> bool:
-        return self._taulell == other._taulell
+        if accions_previes is None:
+            accions_previes = []
+        self.accions_previes = accions_previes
 
-    def __str__(self) -> str:
-        return "\n" + (
-            "\n".join(
-                [
-                    " ".join(
-                        [
-                            "_"
-                            if col == TipusCasella.LLIURE
-                            else "O"
-                            if col == TipusCasella.CARA
-                            else "X"
-                            for col in row
-                        ]
-                    )
-                    for row in self._taulell
-                ]
-            )
-            + "\n"
-        )
+    def __eq__(self, other):
+        for i in range(len(self.tauler)):
+            for j in range(len(self.tauler[0])):
+                if self.tauler[i][j] is not other.tauler[i][j]:
+                    return False
+        return True
 
-    def __repr__(self) -> str:
-        return str(self)
+    def __lt__(self, other):
+        return self.cost_total < other.cost_total
 
-    # Devuelve una copia del estado actual actualizado con el movimiento pasado por argumento
-    def __fer_accio(
-        self, accio: Tuple[Accio.POSAR, Tuple[int, int]]
-    ) -> List[List[TipusCasella]]:
-        _, pos = accio
-        taulell = [row[:] for row in self._taulell]  # Copies the grid
-        taulell[pos[0]][pos[1]] = self._tipus
-        return taulell
+    def __le__(self, other):
+        return self.cost_total <= other.cost_total
 
-    # Comprueba que la casilla este libre
-    def __legal(self, accio: Tuple[Accio.POSAR, Tuple[int, int]]) -> bool:
-        _, pos = accio
-        return self._taulell[pos[0]][pos[1]] == TipusCasella.LLIURE
+    def heretar_a_b(self):
+        if self.pare is not None:
+            self.alpha = self.pare.alpha
+            self.beta = self.pare.beta
 
-    def _cambia_jugador(self) -> TipusCasella:
-        return (
-            TipusCasella.CARA if self._tipus == TipusCasella.CREU else TipusCasella.CREU
-        )
+    @property
+    def accions_possibles(self):
+        llista = list(range(len(self.tauler)))
+        return [(x, y) for x in llista for y in llista]
 
-    def accions_previes(self) -> List[TipusPosarPesa]:
-        return self._accions_previes
+    def calcular_heuristica(self, tipus: TipusCasella):
+        max_en_linea = 0
+        max_seguidas = 0
+        max_en_linea_contrari = 0
+        max_seguidas_contrari = 0
+        tipus_contrari = TipusCasella.CARA if tipus is TipusCasella.CREU else TipusCasella.CREU
+        for i in range(len(self.tauler)):
+            max_en_linea, max_seguidas = devolver_máximos((max_en_linea, max_seguidas),
+                                                          self.contar_recto(0, i, tipus, False))
+            max_en_linea, max_seguidas = devolver_máximos((max_en_linea, max_seguidas),
+                                                          self.contar_recto(i, 1, tipus, True))
+            max_en_linea, max_seguidas = devolver_máximos((max_en_linea, max_seguidas),
+                                                          self.contar_diagonal(0, i, tipus))
+            max_en_linea, max_seguidas = devolver_máximos((max_en_linea, max_seguidas),
+                                                          self.contar_diagonal(i, 0, tipus))
 
-    def es_meta(self) -> Tuple[bool, int]:
-        if not self._accions_previes:
-            return (False, 0) # Empty board
-        
-        n = self._n
-        taulell = self._taulell
-        row, col = self._accions_previes[-1][1]
-        contrari = self._cambia_jugador()
+            max_en_linea_contrari, max_seguidas_contrari = devolver_máximos(
+                (max_en_linea_contrari, max_seguidas_contrari),
+                self.contar_recto(0, i, tipus_contrari, False))
+            max_en_linea_contrari, max_seguidas_contrari = devolver_máximos(
+                (max_en_linea_contrari, max_seguidas_contrari),
+                self.contar_recto(i, 1, tipus_contrari, True))
+            max_en_linea_contrari, max_seguidas_contrari = devolver_máximos(
+                (max_en_linea_contrari, max_seguidas_contrari),
+                self.contar_diagonal(0, i, tipus_contrari))
+            max_en_linea_contrari, max_seguidas_contrari = devolver_máximos(
+                (max_en_linea_contrari, max_seguidas_contrari),
+                self.contar_diagonal(i, 0, tipus_contrari))
 
-        directions = [
-            (0, -1),  # left
-            (0, 1),  # right
-            (-1, 0),  # top
-            (1, 0),  # down
-            (-1, 1),  # diagonal top right
-            (1, 1),  # diagonal bottom right
-            (1, -1),  # diagonal bottom left
-            (-1, -1),  # diagonal bottom left
-        ]
+        res = max_en_linea - max_en_linea_contrari
+        res += (max_seguidas - max_seguidas_contrari) * 5
+        if max_seguidas == 4:
+            res += 10
 
-        for dx, dy in directions:
-            count = 0
-            for k in range(4):
-                x, y = row + k * dx, col + k * dy
+        self.heuristica = res
 
-                if 0 <= x < n and 0 <= y < n:
-                    if taulell[x][y] == contrari:
-                        count += 1
+    def set_valor(self):
+        self.valor = self.cost_total
 
-            if count == 4:
-                return (True, 1)  # El contrari va fer un moviment guanyador
+    @property
+    def cost_total(self) -> int:
+        return self.heuristica + self.pes
 
-        for i in range(n):
-            for j in range(n):
-                if taulell[i][j] == TipusCasella.LLIURE:
-                    return (False, 0)  # Encara es pot jugar
+    def genera_fill(self, tipus: TipusCasella):
 
-        return (True, 0)  # Empat
+        estats_generats = []
 
-    def genera_fills(self, cambia_jugador: bool = False) -> List["Estat"]:
-        return [
-            self.__class__(
-                taulell=self.__fer_accio(accio),
-                n=self._n,
-                tipus=self._tipus if not cambia_jugador else self._cambia_jugador(),
-                pare=self,
-                accions_previes=self._accions_previes + [accio],
-            )
-            for accio in self._acc_pos
-            if self.__legal(accio)
-        ]
+        for accio in self.accions_possibles:
+            nou_estat = copy.deepcopy(self)
+            nou_estat.pare = self
 
+            x, y = accio
+            if nou_estat.tauler[x][y] is TipusCasella.LLIURE:
+                nou_estat.tauler[x][y] = tipus
+                nou_estat.accions_previes.append(accio)
+
+                nou_estat.calcular_heuristica(tipus)
+                nou_estat.pes -= 2
+
+                estats_generats.append(nou_estat)
+
+        return estats_generats
+
+    def es_meta(self) -> bool:
+        for x in range(len(self.tauler)):
+            for y in range(len(self.tauler[0])):
+
+                if self.tauler[x][y] is TipusCasella.LLIURE:
+                    continue
+
+                if y < len(self.tauler) - 3:
+                    if self.check_recto(x, y, self.tauler[x][y], True):
+                        return True
+
+                    direccio = 0
+                    if not (x < len(self.tauler) - 3):
+                        direccio = -1
+                    if not (x >= 3):
+                        direccio = 1
+                    if self.check_diagonal(y, x, self.tauler[x][y], direccio):
+                        return True
+
+                if x < len(self.tauler) - 3:
+                    if self.check_recto(x, y, self.tauler[x][y], False):
+                        return True
+
+        return False
+
+    def check_recto(self, x: int, y: int, tipus: TipusCasella, horizontal: bool = False) -> bool:
+        contar = 0
+        while True:
+            if self.tauler[x][y] is not tipus:
+                return False
+            else:
+                contar += 1
+
+            if contar == 4:
+                return True
+
+            if not horizontal:
+                x += 1
+            else:
+                y += 1
+
+    def check_diagonal(self, x: int, y: int, tipus: TipusCasella, sentit: int = 0) -> bool:
+        contar1 = 0
+        contar2 = 0
+        bool1 = sentit == 0 or sentit == 1
+        bool2 = sentit == 0 or sentit == -1
+        x1 = x
+        y1 = y
+        x2 = x
+        y2 = y
+        while True:          
+
+            if self.tauler[y1][x1] is not tipus:
+                bool1 = False
+            if self.tauler[y2][x2] is not tipus:
+                bool2 = False
+
+            if sentit == -1 and not bool2:
+                return False
+            elif sentit == 1 and not bool1:
+                return False
+            elif sentit == 0 and not bool1 and not bool2:
+                return False
+
+            if sentit == -1 or sentit == 0:
+                contar2 += 1
+            if sentit == 1 or sentit == 0:
+                contar1 += 1
+
+            if contar1 == 4:
+                return True
+            if contar2 == 4:
+                return True
+
+            if bool1:
+                x1 += 1
+                y1 += 1
+            if bool2:
+                x2 += 1
+                y2 -= 1
+
+    def contar_recto(self, x: int, y: int, tipus: TipusCasella, horizontal: bool = False) -> (int, int):
+        contador = 0
+        contador_max = 0
+        contador_nou = 0
+        seguit = False
+        for i in range(len(self.tauler)):
+            casilla = self.tauler[x][i] if horizontal else self.tauler[i][y]
+            if casilla is tipus:
+                contador += 1
+                seguit = True
+                contador_nou += 1
+            else:
+                if seguit:
+                    contador_max = max(contador_max, contador_nou)
+                    contador_nou = 0
+                    seguit = False
+        return (contador, contador_max)
+
+    def contar_diagonal(self, x: int, y: int, tipus: TipusCasella, derecha: bool = True) -> (int, int):
+        contador = 0
+        contador_max = 0
+        contador_nou = 0
+        seguit = False
+        x1 = x
+        y1 = y
+        while x1 < len(self.tauler) and y1 < len(self.tauler):
+            if self.tauler[x1][y1] is tipus:
+                contador += 1
+                seguit = True
+                contador_nou += 1
+            else:
+                if seguit:
+                    contador_max = max(contador_max, contador_nou)
+                    contador_nou = 0
+                    seguit = False
+            x1 += 1
+            y1 += 1 if derecha else -1
+
+        return (contador, contador_max)
+
+    def __str__(self):
+        pass
+
+    def str_position(self, pos=(-1, -1)):
+        pass
+
+
+def devolver_máximos(valores1, valores2):
+    temp11, temp12 = valores1
+    temp21, temp22 = valores2
+    max1 = max(temp11, temp21)
+    max2 = max(temp12, temp22)
+    return max1, max2
 
 class Agent(joc.Agent):
     def __init__(self, nom):
