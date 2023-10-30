@@ -6,20 +6,21 @@ ClauPercepcio:
     PARETS = 2
 """
 
-from errno import ERANGE
-from typing import List, Tuple
+import queue
+from typing import Tuple
 
 from ia_2022 import entorn
 from practica1 import joc
 from practica1.entorn import Accio, TipusCasella, SENSOR
 
 class Estat:
-    def __init__(self, taulell, mida):
+    def __init__(self, taulell, mida) -> None:
         self.taulell = taulell
         self.mida = mida
         self.depth = 0
         self.maxScore = 1000
         self.minScore = -1000
+        self.queue = queue.PriorityQueue()
         self.torn_max = True
 
     def es_meta(self):
@@ -64,9 +65,9 @@ class Estat:
         player_points = 0
 
         for i in range(4):  # connect "4"
-            if taulell[col][row] == 2:
+            if taulell[col][row] == TipusCasella.CREU:
                 ai_points += 1
-            elif taulell[col][row] == 1:
+            elif taulell[col][row] == TipusCasella.CARA:
                 player_points += 1
 
             row += inc_row
@@ -78,7 +79,7 @@ class Estat:
             return self.maxScore
         else:
             return ai_points
-        
+            
     def is_full(self, taulell):
         for i in range(len(taulell)):
             for j in range(len(taulell[i])):
@@ -87,7 +88,7 @@ class Estat:
         return True    
          
     def is_done(self, taulell, score : int):
-        return self.depth >= 4 or self.is_full(taulell) or score >= self.maxScore or score <= self.minScore
+        return self.depth >= 8 or self.is_full(taulell) or score >= self.maxScore or score <= self.minScore
     
     def clone(self, taulell):
         cloned_board = [[cell for cell in row] for row in taulell]
@@ -100,14 +101,15 @@ class Estat:
                     taulell[col][j] = TipusCasella.CARA if is_max else TipusCasella.CREU
                     return True
         return False
-
+        
+    #Jugada De Jugador Max    
     def max_play(self, taulell, alpha, beta) -> Tuple:
         score = self.calc_score(taulell)
 
         if self.is_done(taulell, score):
-            return [-1, score]
+            return (-1, score)
 
-        max_value = (-1, float('-inf'))
+        max = (-1, 0)
         tmp = None
 
         for column in range(self.mida[1]):
@@ -116,22 +118,22 @@ class Estat:
                 self.depth += 1
                 next_value = self.min_play(tmp_taulell, alpha, beta)
 
-                if max_value[0] == -1 or next_value[1] > max_value[1]:
+                print(next_value)
+                if max[0] == -1 or next_value[1] > max[1]:
                     tmp = (column, next_value[1])
                     alpha = next_value[1]
-
                 if beta <= alpha:
-                    break  # Hacer una interrupción en caso de poda alfa-beta.
+                    break
 
-        return max_value if tmp is None else tmp
+        return max if tmp is None else tmp
 
     def min_play(self, taulell, alpha, beta) -> Tuple:
         score = self.calc_score(taulell)
 
         if self.is_done(taulell, score):
-            return [-1, score]
+            return (-1, score)
 
-        min_value = (-1, float('inf'))
+        min = (-1, 0)
         tmp = None
 
         for column in range(self.mida[1]):
@@ -139,57 +141,38 @@ class Estat:
             if self.place(tmp_taulell, column, False):
                 self.depth += 1
                 next_value = self.max_play(tmp_taulell, alpha, beta)
+                print(next_value)   
 
-                if min_value[0] == -1 or next_value[1] < min_value[1]:
+                if min[0] == -1 or next_value[1] < min[1]:
                     tmp = (column, next_value[1])
                     beta = next_value[1]
 
                 if beta <= alpha:
-                    break  # Hacer una interrupción en caso de poda alfa-beta.
+                    break
 
-        return min_value if tmp is None else tmp
-       
+        return min if tmp is None else tmp
+
 
     def calc_score(self, taulell):
-
-        rows = self.mida[0]
-        cols = self.mida[1]
-        vertical_points = 0
-        horizontal_points = 0
-        desc_diagonal_points = 0
-        asc_diagonal_points = 0
-        total_points = 0
-
-        for row in range(rows - 3):
-            for column in range(rows):
-                tmp_punt = self.calc_score_position(row, column, 1, 0, taulell)
-                vertical_points += tmp_punt
-                if tmp_punt >= self.maxScore or tmp_punt <= self.minScore:
-                    return tmp_punt
-
-        for row in range(rows):
-            for column in range(cols - 3):
-                tmp_punt = self.calc_score_position(row, column, 0, 1, taulell)
-                horizontal_points += tmp_punt
-                if tmp_punt >= self.maxScore or tmp_punt <= self.minScore:
-                    return tmp_punt
-
-        for row in range(rows - 3):
-            for column in range(cols - 3):
-                tmp_punt = self.calc_score_position(row, column, 1, 1, taulell)
-                desc_diagonal_points += tmp_punt
-                if tmp_punt >= self.maxScore or tmp_punt <= self.minScore:
-                    return tmp_punt
-
-        for row in range(3, rows):
-            for column in range(cols - 4):
-                tmp_punt = self.calc_score_position(row, column, -1, 1, taulell)
-                asc_diagonal_points += tmp_punt
-                if tmp_punt >= self.maxScore or tmp_punt <= self.minScore:
-                    return tmp_punt
-
-        total_points = vertical_points + horizontal_points + desc_diagonal_points + asc_diagonal_points
-        return total_points     
+        # Calcula el puntaje basado en las fichas en el tablero
+        score = 0
+        # Evaluar filas
+        for row in range(self.mida[0]):
+            for col in range(self.mida[1] - 3):
+                score += self.calc_score_position(row, col, 0, 1, taulell)
+        # Evaluar columnas
+        for col in range(self.mida[1]):
+            for row in range(self.mida[0] - 3):
+                score += self.calc_score_position(row, col, 1, 0, taulell)
+        # Evaluar diagonales ascendentes
+        for row in range(self.mida[0] - 3):
+            for col in range(self.mida[1] - 3):
+                score += self.calc_score_position(row, col, 1, 1, taulell)
+        # Evaluar diagonales descendentes
+        for row in range(3, self.mida[0]):
+            for col in range(self.mida[1] - 3):
+                score += self.calc_score_position(row, col, -1, 1, taulell)
+        return score    
 
     def minimax(self, alpha=float('-inf'), beta=float('inf')):
         best_move = self.max_play(self.taulell, alpha, beta)
@@ -207,11 +190,11 @@ class Agent(joc.Agent):
     ) -> entorn.Accio | Tuple[entorn.Accio, object]:
         estat_actual = Estat( 
             taulell=percepcio[SENSOR.TAULELL],   
-            mida=percepcio[SENSOR.MIDA]         
+            mida=percepcio[SENSOR.MIDA]        
         )
-
         if estat_actual.es_meta():
             return Accio.ESPERAR
         else:
             millor_accio = estat_actual.minimax()
+            #print(millor_accio)
             return Accio.POSAR,millor_accio
