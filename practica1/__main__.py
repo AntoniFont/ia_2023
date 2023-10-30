@@ -6,7 +6,7 @@ from practica1 import agentProfunditat, agentMiniMax, joc
 
 def main():    
 
-    quatre = joc.Taulell([agentMiniMax.Agent("Miquel")])
+    quatre = joc.Taulell([agentMiniMax.Agent("Miquel"), agentMiniMax.Agent("Tomas")])
     quatre.comencar()
 
 
