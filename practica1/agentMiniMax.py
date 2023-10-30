@@ -57,7 +57,7 @@ class Estat:
         if fila < 0 or columna < 0 or fila > len(self.taulell) or columna > len(self.taulell):
             return False
         else :
-            return self.tauler[fila][columna] == TipusCasella.CARA    
+            return self.taulell[fila-1][columna-1] == TipusCasella.CARA    
 
     def calc_score_position(self, row, col, inc_row, inc_col, taulell):
         ai_points = 0
@@ -93,7 +93,7 @@ class Estat:
         cloned_board = [[cell for cell in row] for row in taulell]
         return cloned_board
     
-    def place(self, taulell, col, is_max):
+    def place(self, taulell, col, is_max) -> bool:
         if taulell[col][0] == TipusCasella.LLIURE and 0 <= col < self.mida[1]:
             for j in range(self.mida[0] - 1, -1, -1):
                 if taulell[col][j] == TipusCasella.LLIURE:
@@ -101,53 +101,53 @@ class Estat:
                     return True
         return False
 
-    def max_play(self, taulell, alpha, beta):
+    def max_play(self, taulell, alpha, beta) -> Tuple:
         score = self.calc_score(taulell)
 
-        if self.is_done(self, score):
+        if self.is_done(taulell, score):
             return [-1, score]
 
-        max_value = [-1, 0]
+        max_value = (-1, float('-inf'))
+        tmp = None
 
         for column in range(self.mida[1]):
             tmp_taulell = self.clone(taulell)
             if self.place(tmp_taulell, column, True):
                 self.depth += 1
-                next_value = self.min_play(self, tmp_taulell, alpha, beta)
+                next_value = self.min_play(tmp_taulell, alpha, beta)
 
                 if max_value[0] == -1 or next_value[1] > max_value[1]:
-                    max_value[0] = column
-                    max_value[1] = next_value[1]
+                    tmp = (column, next_value[1])
                     alpha = next_value[1]
 
                 if beta <= alpha:
-                    return max_value
+                    break  # Hacer una interrupción en caso de poda alfa-beta.
 
-        return max_value
+        return max_value if tmp is None else tmp
 
-    def min_play(self, taulell, alpha, beta):
+    def min_play(self, taulell, alpha, beta) -> Tuple:
         score = self.calc_score(taulell)
 
-        if self.is_done(self, taulell, score):
+        if self.is_done(taulell, score):
             return [-1, score]
 
-        min_value = [-1, 0]
+        min_value = (-1, float('inf'))
+        tmp = None
 
         for column in range(self.mida[1]):
             tmp_taulell = self.clone(taulell)
             if self.place(tmp_taulell, column, False):
                 self.depth += 1
-                next_value = self.max_play(self, tmp_taulell, alpha, beta)
+                next_value = self.max_play(tmp_taulell, alpha, beta)
 
                 if min_value[0] == -1 or next_value[1] < min_value[1]:
-                    min_value[0] = column
-                    min_value[1] = next_value[1]
+                    tmp = (column, next_value[1])
                     beta = next_value[1]
 
                 if beta <= alpha:
-                    return min_value
+                    break  # Hacer una interrupción en caso de poda alfa-beta.
 
-        return min_value
+        return min_value if tmp is None else tmp
        
 
     def calc_score(self, taulell):
@@ -191,12 +191,9 @@ class Estat:
         total_points = vertical_points + horizontal_points + desc_diagonal_points + asc_diagonal_points
         return total_points     
 
-    def minimax(self, alpha=float('-inf'), beta=float('inf')):       
-          self.max_play(self.taulell, alpha, beta)    
-
-    
-    
-   
+    def minimax(self, alpha=float('-inf'), beta=float('inf')):
+        best_move = self.max_play(self.taulell, alpha, beta)
+        return best_move 
    
 class Agent(joc.Agent):
     def __init__(self, nom):
@@ -217,5 +214,4 @@ class Agent(joc.Agent):
             return Accio.ESPERAR
         else:
             millor_accio = estat_actual.minimax()
-
-            return millor_accio
+            return Accio.POSAR,millor_accio
