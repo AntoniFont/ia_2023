@@ -8,16 +8,16 @@ ClauPercepcio:
 from ia_2022 import entorn
 from practica1 import joc
 from practica1.entorn import Accio,SENSOR,TipusCasella
-
+from copy import deepcopy
 
 
 class EstatProfunditat():
 
-    def __init__(self,tauler):
+    def __init__(self,tauler,accionsPrevies = []):
         self.tauler = tauler
-
-    #Hem de revisar si a cualque lloc del tauler existeix un cuatre en ratlla, ho farem de manera bruta encara que existeixen
-    #maneres mes eficients de trobar-ho
+        self.accions_previes = accionsPrevies
+        
+    #Retorna true si existeix un cuatre en ratlla del nostre jugador.
     def es_meta(self):
         for fila in range(len(self.tauler)):
             for columna in (range(len(self.tauler[0]))):
@@ -27,103 +27,88 @@ class EstatProfunditat():
                     #
                     #
                     #
-                    if(self.estaOcupat(fila +1,columna) and self.estaOcupat(fila +2, columna) and self.estaOcupat(fila + 3,columna)):
+                    if(self._estaOcupatPerCara(fila +1,columna) and self._estaOcupatPerCara(fila +2, columna) and self._estaOcupatPerCara(fila + 3,columna)):
                         return True
                     # (x)
                     #  x
                     #  x
                     #  x
-                    if(self.estaOcupat(fila,columna +1) and self.estaOcupat(fila, columna +2) and self.estaOcupat(fila,columna +3)):
+                    if(self._estaOcupatPerCara(fila,columna +1) and self._estaOcupatPerCara(fila, columna +2) and self._estaOcupatPerCara(fila,columna +3)):
                         return True
                     # (x)
                     #   x
                     #    x
                     #     x
-                    if(self.estaOcupat(fila +1,columna +1) and self.estaOcupat(fila+2, columna +2) and self.estaOcupat(fila+3,columna +3)):
+                    if(self._estaOcupatPerCara(fila +1,columna +1) and self._estaOcupatPerCara(fila+2, columna +2) and self._estaOcupatPerCara(fila+3,columna +3)):
                         return True
                     #        x
                     #      x
                     #    x
                     # (x)    
-                    if(self.estaOcupat(fila +1,columna -1) and self.estaOcupat(fila+2, columna -2) and self.estaOcupat(fila+3,columna -3)):
+                    if(self._estaOcupatPerCara(fila +1,columna -1) and self._estaOcupatPerCara(fila+2, columna -2) and self._estaOcupatPerCara(fila+3,columna -3)):
                         return True
         return False         
-    def estaOcupat(self,fila,columna):
+
+    #Retorna True si una posicio esta ocupada, false si no esta ocupada i false també si la posicio esta
+    #fora del tauler
+    def _estaOcupatPerCara(self,fila,columna):
         #Suposam que el tauler es sempre un quadrat
-        if fila < 0 or columna < 0 or fila > len(self.tauler) or columna > len(self.tauler):
+        if fila < 0 or columna < 0 or fila > len(self.tauler)-1 or columna > len(self.tauler)-1:
             return False
         else :
             return self.tauler[fila][columna] == TipusCasella.CARA
-    
+        
+    def genera_fill(self):
+        fills = []
+        for fila in range(len(self.tauler)):
+            for columna in (range(len(self.tauler[0]))):
+                if(self.tauler[fila][columna] == TipusCasella.LLIURE):
+                    nouTauler = deepcopy(self.tauler)
+                    nouAccionsPrevies = deepcopy(self.accions_previes)
+                    nouTauler[fila][columna] = TipusCasella.CARA
+                    nouAccionsPrevies.append((Accio.POSAR,(fila,columna)))
+                    fills.append(EstatProfunditat(nouTauler,nouAccionsPrevies)) 
+        return fills
 
 class Agent(joc.Agent):
     def __init__(self, nom):
-        #pa abajo
-        """self.__ACCIONSPERFER = [
-            (Accio.POSAR,(2,2)),
-            (Accio.POSAR,(2,3)),
-            (Accio.POSAR,(2,4)),
-            (Accio.POSAR,(2,5))
-        ]"""
-
-        # - - - - 
-        """
-        self.__ACCIONSPERFER = [
-            (Accio.POSAR,(2,2)),
-            (Accio.POSAR,(3,2)),
-            (Accio.POSAR,(4,2)),
-            (Accio.POSAR,(5,2))
-        ]"""
-        # diagonal
-        """
-        self.__ACCIONSPERFER = [
-            (Accio.POSAR,(1,2)),
-            (Accio.POSAR,(2,3)),
-            (Accio.POSAR,(3,4)),
-            (Accio.POSAR,(4,5))
-        ]
-        """
-        
-        self.__ACCIONSPERFER = [
-            (Accio.POSAR,(3,5)),
-            (Accio.POSAR,(4,4)),
-            (Accio.POSAR,(5,3)),
-            (Accio.POSAR,(6,2))
-        ]
-        
-        
-        self.numACCIONSFETES = 0
+        self.__oberts = []
+        self.__tancats = []
+        self.__accions = []
+        self.primeraExecucio = True
         super(Agent, self).__init__(nom)
 
     def pinta(self, display):
         pass
  
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:        
-        estat = EstatProfunditat(percepcio[SENSOR.TAULELL])
-        print(estat.es_meta())
-        if(self.numACCIONSFETES > len(self.__ACCIONSPERFER) - 1):
+        if(self.primeraExecucio == True):
+            self.primeraExecucio = False
+            self.cercaprofunditat(EstatProfunditat(percepcio[SENSOR.TAULELL]))
             return Accio.ESPERAR
         else:
-            accio = self.__ACCIONSPERFER[self.numACCIONSFETES]
-            self.numACCIONSFETES = self.numACCIONSFETES + 1
-        return accio
-
-    def cercaamplada(self,estatInicial):
+            if(len(self.__accions)!=0):
+                accio = self.__accions.pop(0)
+                return accio
+            else:
+                return Accio.ESPERAR
+        
+    def cercaprofunditat(self,estatInicial):
         self.__oberts = [estatInicial]
         self.__tancats = []
         while len(self.__oberts) != 0:
             estatActual = self.__oberts.pop(0)
             if(estatActual.es_meta()):
+                print(estatActual.tauler)
                 self.__accions = estatActual.accions_previes
                 self.__tancats.append(estatActual)
                 return True
             else:
                 fills = estatActual.genera_fill()
                 self.__tancats.append(estatActual)
-                #Nomes afegirem els estats que son segurs, legals
-                #i que encara no hem visitat                
+                #Nomes els fills que encara no hem visitat            
                 for fill in fills:
-                    if(fill.es_segur() and fill.legal() and fill not in self.__tancats):
-                        self.__oberts.append(fill)
+                    if(fill not in self.__tancats):
+                        self.__oberts.insert(0,fill)
         return False
     
