@@ -5,8 +5,6 @@ ClauPercepcio:
     OLOR = 1
     PARETS = 2
 """
-
-import queue
 from typing import Tuple
 
 from ia_2022 import entorn
@@ -17,49 +15,10 @@ class Estat:
     def __init__(self, taulell, mida) -> None:
         self.taulell = taulell
         self.mida = mida
-        self.depth = 0
         self.maxScore = 1000
         self.minScore = -1000
-        self.queue = queue.PriorityQueue()
         self.torn_max = True
-
-    def es_meta(self):
-        for fila in range(len(self.taulell)):
-            for columna in (range(len(self.taulell[0]))):
-                # Suposam que el lloc sempre serà cuatre en ratlla i no un altre número en ratlla.
-                if(self.taulell[fila][columna] == TipusCasella.CARA):
-                    # (x) x x x
-                    #
-                    #
-                    #
-                    if(self.estaOcupat(fila +1,columna) and self.estaOcupat(fila +2, columna) and self.estaOcupat(fila + 3,columna)):
-                        return True
-                    # (x)
-                    #  x
-                    #  x
-                    #  x
-                    if(self.estaOcupat(fila,columna +1) and self.estaOcupat(fila, columna +2) and self.estaOcupat(fila,columna +3)):
-                        return True
-                    # (x)
-                    #   x
-                    #    x
-                    #     x
-                    if(self.estaOcupat(fila +1,columna +1) and self.estaOcupat(fila+2, columna +2) and self.estaOcupat(fila+3,columna +3)):
-                        return True
-                    #        x
-                    #      x
-                    #    x
-                    # (x)    
-                    if(self.estaOcupat(fila +1,columna -1) and self.estaOcupat(fila+2, columna -2) and self.estaOcupat(fila+3,columna -3)):
-                        return True
-        return False         
-    def estaOcupat(self,fila,columna):
-        #Suposam que el tauler es sempre un quadrat
-        if fila < 0 or columna < 0 or fila > len(self.taulell) or columna > len(self.taulell):
-            return False
-        else :
-            return self.taulell[fila-1][columna-1] == TipusCasella.CARA    
-
+    
     def calc_score_position(self, row, col, inc_row, inc_col, taulell):
         ai_points = 0
         player_points = 0
@@ -88,7 +47,7 @@ class Estat:
         return True    
          
     def is_done(self, taulell, score : int):
-        return self.depth >= 8 or self.is_full(taulell) or score >= self.maxScore or score <= self.minScore
+        return self.is_full(taulell) or score >= self.maxScore or score <= self.minScore
     
     def clone(self, taulell):
         cloned_board = [[cell for cell in row] for row in taulell]
@@ -96,91 +55,90 @@ class Estat:
     
     def place(self, taulell, col, is_max) -> bool:
         if taulell[col][0] == TipusCasella.LLIURE and 0 <= col < self.mida[1]:
-            for j in range(self.mida[0] - 1, -1, -1):
-                if taulell[col][j] == TipusCasella.LLIURE:
+            for j in range(self.mida[0] -1, -1, -1):
+                if taulell[col][j] is TipusCasella.LLIURE:
                     taulell[col][j] = TipusCasella.CARA if is_max else TipusCasella.CREU
-                    return True
+                    return True                  
         return False
+    
+    def minimax(self, is_max, depth, alpha, beta) -> Tuple:
+        score = self.calc_score(self.taulell)
         
-    #Jugada De Jugador Max    
-    def max_play(self, taulell, alpha, beta) -> Tuple:
-        score = self.calc_score(taulell)
-
-        if self.is_done(taulell, score):
+        if self.is_done(self.taulell, score) or depth == 0:
             return (-1, score)
-
-        max = (-1, 0)
         tmp = None
+        
+        if is_max:
+            max_val = (-1, float('-inf'))
+            for col in range(self.mida[1]):
+                tmp_taulell = self.clone(self.taulell)
+                if self.place(tmp_taulell, col, True):
+                    value = self.minimax(False, depth - 1, alpha, beta)
+                    if value[1] > max_val[1]:
+                        tmp = (col, value[1])
+                    alpha = max(alpha, value[1])
+                    if beta <= alpha:
+                        break
+            return tmp
+        else:
+            min_val = (-1, float('inf'))            
+            for col in range(self.mida[1]):
+                tmp_taulell = self.clone(self.taulell)
+                if self.place(tmp_taulell, col, False):
+                    value = self.minimax(True, depth - 1, alpha, beta)
+                    if value[1] < min_val[1]:
+                        tmp = (col, value[1])
+                    beta = min(beta, value[1])
+                    if beta <= alpha:
+                        break
+            return tmp
 
-        for column in range(self.mida[1]):
-            tmp_taulell = self.clone(taulell)
-            if self.place(tmp_taulell, column, True):
-                self.depth += 1
-                next_value = self.min_play(tmp_taulell, alpha, beta)
-
-                print(next_value)
-                if max[0] == -1 or next_value[1] > max[1]:
-                    tmp = (column, next_value[1])
-                    alpha = next_value[1]
-                if beta <= alpha:
-                    break
-
-        return max if tmp is None else tmp
-
-    def min_play(self, taulell, alpha, beta) -> Tuple:
-        score = self.calc_score(taulell)
-
-        if self.is_done(taulell, score):
-            return (-1, score)
-
-        min = (-1, 0)
-        tmp = None
-
-        for column in range(self.mida[1]):
-            tmp_taulell = self.clone(taulell)
-            if self.place(tmp_taulell, column, False):
-                self.depth += 1
-                next_value = self.max_play(tmp_taulell, alpha, beta)
-                print(next_value)   
-
-                if min[0] == -1 or next_value[1] < min[1]:
-                    tmp = (column, next_value[1])
-                    beta = next_value[1]
-
-                if beta <= alpha:
-                    break
-
-        return min if tmp is None else tmp
-
+    def minimax_decision(self, depth=8):
+        best_move = self.minimax(True, depth, float('-inf'), float('inf'))
+        return best_move
 
     def calc_score(self, taulell):
-        # Calcula el puntaje basado en las fichas en el tablero
-        score = 0
-        # Evaluar filas
+        vScore = 0
+        hScore = 0
+        ddScore = 0
+        adScore = 0
+        total_score = 0
+
+        for row in range(self.mida[0] - 3):
+            for col in range(self.mida[1]):
+                tmp = self.calc_score_position(row, col, 1, 0, taulell)
+                vScore += tmp
+                if tmp >= self.maxScore or tmp <= self.minScore:
+                    return tmp
+
         for row in range(self.mida[0]):
             for col in range(self.mida[1] - 3):
-                score += self.calc_score_position(row, col, 0, 1, taulell)
-        # Evaluar columnas
-        for col in range(self.mida[1]):
-            for row in range(self.mida[0] - 3):
-                score += self.calc_score_position(row, col, 1, 0, taulell)
-        # Evaluar diagonales ascendentes
+                tmp = self.calc_score_position(row, col, 0, 1, taulell)
+                hScore += tmp
+                if tmp >= self.maxScore or tmp <= self.minScore:
+                    return tmp
+
         for row in range(self.mida[0] - 3):
             for col in range(self.mida[1] - 3):
-                score += self.calc_score_position(row, col, 1, 1, taulell)
-        # Evaluar diagonales descendentes
+                tmp = self.calc_score_position(row, col, 1, 1, taulell)
+                ddScore += tmp
+                if tmp >= self.maxScore or tmp <= self.minScore:
+                    return tmp
+        
         for row in range(3, self.mida[0]):
-            for col in range(self.mida[1] - 3):
-                score += self.calc_score_position(row, col, -1, 1, taulell)
-        return score    
-
-    def minimax(self, alpha=float('-inf'), beta=float('inf')):
-        best_move = self.max_play(self.taulell, alpha, beta)
-        return best_move 
+            for col in range(self.mida[1] - 4):
+                tmp = self.calc_score_position(row, col, -1, 1, taulell)
+                adScore += tmp
+                if tmp >= self.maxScore or tmp <= self.minScore:
+                    return tmp
+        
+        total_score = vScore + hScore + ddScore + adScore
+        return total_score     
    
 class Agent(joc.Agent):
     def __init__(self, nom):
         super(Agent, self).__init__(nom)
+        self.a = True
 
     def pinta(self, display):
         pass
@@ -192,9 +150,11 @@ class Agent(joc.Agent):
             taulell=percepcio[SENSOR.TAULELL],   
             mida=percepcio[SENSOR.MIDA]        
         )
-        if estat_actual.es_meta():
+        
+        value = estat_actual.calc_score(percepcio[SENSOR.TAULELL])
+        if value == estat_actual.maxScore or value == estat_actual.minScore:
             return Accio.ESPERAR
         else:
-            millor_accio = estat_actual.minimax()
-            #print(millor_accio)
-            return Accio.POSAR,millor_accio
+            millor_accio = estat_actual.minimax_decision()
+            print(millor_accio)
+            return Accio.POSAR, millor_accio  
