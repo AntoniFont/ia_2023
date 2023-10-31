@@ -4,159 +4,154 @@ ClauPercepcio:
     OLOR = 1
     PARETS = 2
 """
-import copy
-from queue import PriorityQueue
 from ia_2022 import entorn
 from practica1 import joc
-from practica1.entorn import Accio, SENSOR
+from practica1.entorn import Accio,SENSOR,TipusCasella
+from copy import deepcopy
 
 
-class Estat:
-    def __init__(self, filas_columnas, pes: int, heuristica=4, pare=None):
-        super().__init__(filas_columnas, heuristica, pare)
-        self.__pes = pes
-        self.__fn = self.heuristica + self.__pes
+class Estat():
 
-
-    def es_meta(self):
-        return self.heuristica == 0
-
-    def calcular_heuristica_fn (self):
-        for col in range(self.lenTablero):
-            for row in range(self.lenTablero):
-                if self.tablero[col][row] == 1:
-                    h = self.mirar_combinacion(col, row)
-                    if h < self.heuristica:
-                        self.heuristica = h
-        self.fn = self.heuristica + self.__pes
-
-    def genera_fills(self) -> list:
-        estats_generats = []
-
-        for col in range(self.lenTablero):
-            for row in range(self.lenTablero):
-                if self.tablero[col][row] == 0:
-                    nou_estat = copy.deepcopy(self)
-                    nou_estat.pare = (self, (col, row))
-
-                    nou_estat.tablero[col][row] = 1
-                    nou_estat.pes += 1
-                    nou_estat.calcular_heuristica_fn()
-                    estats_generats.append(nou_estat)
+    def __init__(self,tauler,accionsPrevies = []):
+        self.tauler = tauler
+        self.accions_previes = accionsPrevies
+        self.pes = None
+        self.heuristica = self.calcul_heuristica() if accionsPrevies else 1000
         
-        return estats_generats
+    #Retorna true si existeix un cuatre en ratlla del nostre jugador.
+    def es_meta(self):
+        for fila in range(len(self.tauler)):
+            for columna in (range(len(self.tauler[0]))):
+                # Suposam que el lloc sempre serà cuatre en ratlla i no un altre número en ratlla.
+                if(self.tauler[fila][columna] == TipusCasella.CARA):
+                    # (x) x x x
+                    #
+                    #
+                    #
+                    if(self._estaOcupatPerCara(fila +1,columna) and self._estaOcupatPerCara(fila +2, columna) and self._estaOcupatPerCara(fila + 3,columna)):
+                        return True
+                    # (x)
+                    #  x
+                    #  x
+                    #  x
+                    if(self._estaOcupatPerCara(fila,columna +1) and self._estaOcupatPerCara(fila, columna +2) and self._estaOcupatPerCara(fila,columna +3)):
+                        return True
+                    # (x)
+                    #   x
+                    #    x
+                    #     x
+                    if(self._estaOcupatPerCara(fila +1,columna +1) and self._estaOcupatPerCara(fila+2, columna +2) and self._estaOcupatPerCara(fila+3,columna +3)):
+                        return True
+                    #        x
+                    #      x
+                    #    x
+                    # (x)    
+                    if(self._estaOcupatPerCara(fila +1,columna -1) and self._estaOcupatPerCara(fila+2, columna -2) and self._estaOcupatPerCara(fila+3,columna -3)):
+                        return True
+        return False         
 
-    # Cuando encuentra una pieza colocada, comprueba las siguientes 3 casillas horizontalmente, diagonalmente y verticalmente 
-    # para calcular la heuristica correspondiente
-    def calcula_heuristica(self, columna, fila) -> int:
-        heuristica_menor = 3
-        heuristica_menor = min(heuristica_menor, self.mirar_combinacionColumnas(columna, fila), self.mirar_combinacionFilas(columna, fila),
-                                self.mirar_combinacionDiagonalUp(columna, fila), self.mirar_combinacionDiagonalDown(columna, fila))
-        return heuristica_menor
-    
-    def mirar_combinacionColumnas(self, columna: int, fila: int) -> int:
-        heuristica = 3
-        if columna + 3 < self.lenTablero:
-            for i in range(columna + 1, columna + 4):
-                if self.tablero[i][fila] == 1:
-                    heuristica -= 1
-        return heuristica
-                
-    def mirar_combinacionFilas(self, columna: int, fila: int) -> int:
-        heuristica = 3
-        if fila + 3 < self.lenTablero:
-            for j in range(fila + 1, fila + 4):
-                if self.tablero[columna][j] == 1:
-                    heuristica -= 1
-        return heuristica
-                
-    def mirar_combinacionDiagonalDown(self, columna: int, fila: int) -> int:
-        heuristica = 3
-        if fila + 3 < self.lenTablero:
-            if columna + 3 < self.lenTablero:
-                for i in range(1, 4):
-                    if self.tablero[i + columna][i + fila] == 1:
-                        heuristica -= 1
-        return heuristica
-    
-    def mirar_combinacionDiagonalUp(self, columna: int, fila: int) -> int:
-        heuristica = 3
-        if fila - 3 >= 0:
-            if columna +3 < self.lenTablero:
-                for i in range(1, 4):
-                    if self.tablero[columna + i][fila - i] == 1:
-                        heuristica -= 1
-        return heuristica
-    
-    @property
-    def pes(self):
-        return self.__pes
-    
-    @pes.setter
-    def pes(self, pes):
-        self.__pes = pes
+    #Retorna True si una posicio esta ocupada, false si no esta ocupada i false també si la posicio esta
+    #fora del tauler
+    def _estaOcupatPerCara(self,fila,columna):
+        #Suposam que el tauler es sempre un quadrat
+        if fila < 0 or columna < 0 or fila > len(self.tauler)-1 or columna > len(self.tauler)-1:
+            return False
+        else :
+            return self.tauler[fila][columna] == TipusCasella.CARA
+        
+    def calcul_heuristica(self) -> int:
 
-    @property
-    def fn(self):
-        return self.__fn
+        n = len(self.tauler[0])
+        taulell = self.tauler
+        l = len(self.accions_previes)
+        darreraAccio = self.accions_previes[l-1][1]
+        row = darreraAccio[0]
+        col = darreraAccio[1]
+        casella = taulell[row][col]
+        count = 0
+
+        directions = [
+            (1, 1),  # diagonal amunt dreta
+            (-1, -1),# diagonal avall esquerra
+            (-1, 1), # diagonal avall dreta
+            (1, -1), # diagonal amunt esquerra
+            (-1, 0), # amunt
+            (1, 0),  # avall
+            (0, 1),  # dreta
+            (0, -1)  # esquerra
+        ]
+
+        for i, j in directions:
+            for k in range(4):
+                x = row + k * i
+                y = col + k * j
+
+                if 0 <= x < n and 0 <= y < n:
+                    if casella == taulell[x][y]:
+                        count += 1
+
+        return 3 * len(directions) - count
+
+    def valor(self) -> int:
+        return self.heuristica    
+        
+    def genera_fill(self):
+        fills = []
+        for fila in range(len(self.tauler)):
+            for columna in (range(len(self.tauler[0]))):
+                if(self.tauler[fila][columna] == TipusCasella.LLIURE):
+                    nouTauler = deepcopy(self.tauler)
+                    nouAccionsPrevies = deepcopy(self.accions_previes)
+                    nouTauler[fila][columna] = TipusCasella.CARA
+                    nouAccionsPrevies.append((Accio.POSAR,(fila,columna)))
+                    fills.append(Estat(nouTauler,nouAccionsPrevies)) 
+        return fills
     
-    @fn.setter
-    def fn(self, fn):
-        self.__fn = fn
-    
-    def __lt__(self, other):
-        return False
 
 class Agent(joc.Agent):
     def __init__(self, nom):
+        self.__oberts = []
+        self.__tancats = []
+        self.__accions = []
+        self.primeraExecucio = True
         super(Agent, self).__init__(nom)
-        self.__oberts = None
-        self.__tancats = None
-        self.__accions = None
 
-    def cerca(self, estat_inicial: Estat):
-        self.__oberts = PriorityQueue()
-        self.__tancats = set()
-        estat_actual = None
-
-        self.__oberts.put((estat_inicial.fn, estat_inicial))
-        estat_actual = None
-
-        while not self.__oberts.empty():
-            _, estat_actual = self.__oberts.get()
-            for estat_tancat in self.__tancats:
-                if estat_actual == estat_tancat:
-                    continue
-            if estat_actual.es_meta():
-                break
-
-            estats_fills = estat_actual.genera_fills()
-            for estat in estats_fills:
-                if estat not in self.__tancats:
-                    self.__oberts.put((estat.fn, estat))
-
-            self.__tancats.add(estat_actual)
-        if estat_actual.es_meta():
-            estat_actual.calcular_heuristica_fn()
-            accions = list()
-            iterador = estat_actual
-            while iterador.pare is not None:
-                pare, accio = iterador.pare
-
-                accions.append(accio)
-                iterador = pare
-            self.__accions = accions
-    
-    def actua(
-            self, percepcio: entorn.Percepcio
-    ) -> entorn.Accio | tuple[entorn.Accio, object]:
-        estat = Estat(percepcio[SENSOR.MIDA], 0)
-        
-        if self.__accions is None:
-            self.cerca(estat)
-
-        if self.__accions:
-            accio = self.__accions.pop()
-            return Accio.POSAR, accio
-        else:
+    def pinta(self, display):
+        pass
+ 
+    def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:        
+        if(self.primeraExecucio == True):
+            self.primeraExecucio = False
+            self.cerca(Estat(
+                percepcio[SENSOR.TAULELL]
+                
+                ))
             return Accio.ESPERAR
+        else:
+            if(len(self.__accions)!=0):
+                accio = self.__accions.pop(0)
+                return accio
+            else:
+                return Accio.ESPERAR
+        
+    def cerca(self,estatInicial):
+        self.__oberts = [estatInicial]
+        self.__tancats = []
+        while len(self.__oberts) != 0:
+            estatActual = self.__oberts.pop(0)
+            if(estatActual.es_meta()):
+                self.__accions = estatActual.accions_previes
+                self.__tancats.append(estatActual)
+                return True
+            else:
+                fills = estatActual.genera_fill()
+                self.__tancats.append(estatActual)
+                #Nomes els fills que encara no hem visitat            
+                bestFill = fills[0]
+                for fill in fills:
+                    if(fill.heuristica < bestFill.heuristica):
+                        bestFill = fill
+                    #if(fill not in self.__tancats):
+                    #    self.__oberts.insert(0,fill) para profunditat
+                self.__oberts.insert(0,bestFill)
+        return False

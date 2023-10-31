@@ -1,12 +1,13 @@
 import sys
 sys.path.append("C:\\Users\\Toniuni\\Desktop\\Curso 23-24\\IA\\ia_2023")
 sys.path.append("C:\\Users\\juanjo\\Documents\\GitHub\\ia_2023")
-from practica1 import agentProfunditat, agentMiniMax, joc
+sys.path.append("C:\\Users\\marij\\Desktop\\IA")
+from practica1 import agentProfunditat, agentMiniMax,agentAstar, joc
 
 
 def main():    
 
-    quatre = joc.Taulell([agentMiniMax.Agent("Miquel"), agentMiniMax.Agent("Tomas")])
+    quatre = joc.Taulell([agentAstar.Agent("Miquel")])
     quatre.comencar()
 
 
