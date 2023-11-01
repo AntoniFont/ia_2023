@@ -90,10 +90,7 @@ class Estat():
                     if casella == taulell[x][y]:
                         count += 1
 
-        return 3 * len(directions) - count
-
-    def valor(self) -> int:
-        return self.heuristica    
+        return 3 * len(directions) - count  
         
     def genera_fill(self):
         fills = []
