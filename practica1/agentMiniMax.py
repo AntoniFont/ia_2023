@@ -1,5 +1,4 @@
 """
-
 ClauPercepcio:
     POSICIO = 0
     OLOR = 1
@@ -74,6 +73,7 @@ class Estat:
                 tmp_taulell = self.clone(self.taulell)
                 if self.place(tmp_taulell, col, True):
                     value = self.minimax(False, depth - 1, alpha, beta)
+                    print(value )
                     if value[1] > max_val[1]:
                         tmp = (col, value[1])
                     alpha = max(alpha, value[1])
@@ -86,6 +86,7 @@ class Estat:
                 tmp_taulell = self.clone(self.taulell)
                 if self.place(tmp_taulell, col, False):
                     value = self.minimax(True, depth - 1, alpha, beta)
+                    print(value)
                     if value[1] < min_val[1]:
                         tmp = (col, value[1])
                     beta = min(beta, value[1])
