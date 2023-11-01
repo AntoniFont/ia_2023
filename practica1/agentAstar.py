@@ -70,7 +70,7 @@ class Estat():
         casella = taulell[row][col]
         count = 0
 
-        directions = [
+        direccions = [
             (1, 1),  # diagonal amunt dreta
             (-1, -1),# diagonal avall esquerra
             (-1, 1), # diagonal avall dreta
@@ -81,16 +81,21 @@ class Estat():
             (0, -1)  # esquerra
         ]
 
-        for i, j in directions:
+        #Comprovam per a cada moviment posible
+        for i, j in direccions:
+            #Cercam el 4 en linea
             for k in range(4):
                 x = row + k * i
                 y = col + k * j
 
+                #si el moviment es legal
                 if 0 <= x < n and 0 <= y < n:
+                    #comprova que la casella a la que estam no sigui igual a la de la darrera acció
+                    #per tal de millorar la heurística, incrementant el valor de les caselles de la darrera acció
                     if casella == taulell[x][y]:
                         count += 1
-
-        return 3 * len(directions) - count  
+        #totes les combinacions on es pot fer 4 en linea menys el count
+        return 3 * len(direccions) - count  
         
     def genera_fill(self):
         fills = []
@@ -148,7 +153,5 @@ class Agent(joc.Agent):
                 for fill in fills:
                     if(fill.heuristica < bestFill.heuristica):
                         bestFill = fill
-                    #if(fill not in self.__tancats):
-                    #    self.__oberts.insert(0,fill) para profunditat
                 self.__oberts.insert(0,bestFill)
         return False
