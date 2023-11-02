@@ -4,6 +4,7 @@ ClauPercepcio:
     OLOR = 1
     PARETS = 2
 """
+from queue import PriorityQueue
 from ia_2022 import entorn
 from practica1 import joc
 from practica1.entorn import Accio,SENSOR,TipusCasella
@@ -108,13 +109,16 @@ class Estat():
                     fills.append(Estat(nouTauler, nouAccionsPrevies)) 
         return fills
     
-    def pes(self):
+    def __lt__(self, altre):
+        return self.f()<altre.f()
+    
+    def f(self):
         return self.heuristica + len(self.accions_previes)
     
 
 class Agent(joc.Agent):
     def __init__(self, nom):
-        self.__oberts = []
+        self.__oberts = PriorityQueue()
         self.__tancats = []
         self.__accions = []
         self.primeraExecucio = True
@@ -138,10 +142,10 @@ class Agent(joc.Agent):
                 return Accio.ESPERAR
         
     def cerca(self,estatInicial):
-        self.__oberts = [estatInicial]
+        self.__oberts = PriorityQueue()
         self.__tancats = []
-        while len(self.__oberts) != 0:
-            estatActual = self.__oberts.pop(0)
+        while not self.__oberts.empty():
+            a, estatActual = self.__oberts.pop(0)
             if(estatActual.es_meta()):
                 self.__accions = estatActual.accions_previes
                 self.__tancats.append(estatActual)
@@ -149,10 +153,7 @@ class Agent(joc.Agent):
             else:
                 fills = estatActual.genera_fill()
                 self.__tancats.append(estatActual)
-                #Nomes els fills que encara no hem visitat            
-                bestFill = fills[0]
+                #Nomes els fills que encara no hem visitat           
                 for fill in fills:
-                    if(fill.pes() < bestFill.pes()):
-                        bestFill = fill
-                self.__oberts.insert(0,bestFill)
+                    self.__oberts.put( fill.f() ,fill)
         return False
