@@ -140,6 +140,7 @@ class CoaPrioridad(PriorityQueue):
         return super().get(elem)
     
 class Agent(joc.Agent):
+    
     def __init__(self, nom):
         self.__oberts = PriorityQueue()
         self.__tancats = []

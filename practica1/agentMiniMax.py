@@ -1,161 +1,157 @@
 """
+
 ClauPercepcio:
     POSICIO = 0
     OLOR = 1
     PARETS = 2
 """
-from typing import Tuple
-
 from ia_2022 import entorn
 from practica1 import joc
-from practica1.entorn import Accio, TipusCasella, SENSOR
+from practica1.entorn import Accio,SENSOR,TipusCasella
+from copy import deepcopy
 
-class Estat:
-    def __init__(self, taulell, mida) -> None:
-        self.taulell = taulell
-        self.mida = mida
-        self.maxScore = 1000
-        self.minScore = -1000
-        self.torn_max = True
-    
-    def calc_score_position(self, row, col, inc_row, inc_col, taulell):
-        ai_points = 0
-        player_points = 0
+class EstatMiniMax():
 
-        for i in range(4):  # connect "4"
-            if taulell[col][row] == TipusCasella.CREU:
-                ai_points += 1
-            elif taulell[col][row] == TipusCasella.CARA:
-                player_points += 1
+    def __init__(self,tauler,accionsPrevies = []):
+        self.tauler = tauler
+        self.accions_previes = accionsPrevies
 
-            row += inc_row
-            col += inc_col
+    #Cerca per tot el tauler i retorna la ratlla amb posibilitats de ser completada
+    #mes gran que hi hagi del jugador seleccionat 
+    #Una ratlla de 3, ex:(x x x o) que mai pugi ser completada contará com a 0.
+    def calc_score(self,jugador):
+        #
+        #(x) x x x
+        #
+        #
+        HORITZONTAL = ((0,0),(1,0),(2,0),(3,0))
+        # (x)
+        #  x
+        #  x
+        #  x
+        VERTICAL = ((0,0),(0,1),(0,2),(0,3))
+        # (x)
+        #   x
+        #    x
+        #     x
+        DIAGONAL_INF = ((0,0),(1,1),(2,2),(3,3))
+        #        x
+        #      x
+        #    x
+        # (x)
+        DIAGONAL_SUP = ((0,0),(1,-1),(2,-2),(3,-3))
+        ratlles_valides = (HORITZONTAL,VERTICAL,DIAGONAL_INF,DIAGONAL_SUP)    
+        puntuacions = [0, # Ratlla horitzontal mes llarga, en percentatge respecte a 4 en ratlla
+                       0, # Ratlla vertical mes llarga, en percentatge respecte a 4 en ratlla
+                       0, # Ratlla diagonal_inf mes llarga, en percentatge respecte a 4 en ratlla
+                       0] # Ratlla diagonal_sup mes llarga, en percentatge respecte a 4 en ratlla
+        for fila in range(len(self.tauler)):
+            for columna in (range(len(self.tauler[0]))):
+                if(self.tauler[fila][columna] == jugador):
+                    for i in range(len(ratlles_valides)):
+                        ratlla = ratlles_valides[i]
+                        percentatgeRatllaCompletat = self._percentatgePatroCompletat(fila,columna,ratlla,jugador)
+                        if(percentatgeRatllaCompletat > puntuacions[i]):
+                            puntuacions[i] = percentatgeRatllaCompletat
+        return max(puntuacions)
 
-        if player_points == 4:
-            return self.minScore
-        elif ai_points == 4:
-            return self.maxScore
+    #Retorna el percentatge del patró que has completat. Si mai podràs completar el patró(perque un altre jugador
+    # bloquetja la posibilitat), retorna 0.
+    def _percentatgePatroCompletat(self,x_inicial,y_inicial,patro,jugador):
+        pasosDelPatroCompletats = 0
+        for x,y in patro:
+            if(self._estaOcupatPerJugador(x_inicial + x,y_inicial + y,jugador)):
+                pasosDelPatroCompletats = pasosDelPatroCompletats + 1
+            elif(self._estaOcupatPerJugador(x_inicial + x,y_inicial + y,TipusCasella.LLIURE)):
+                pass
+                #No fer res, encara hi ha potencial per completar mes patró
+            else: # Esta ocupat per jugador rival 
+                if(pasosDelPatroCompletats != len(patro)): #Mai podràs completar tot el patró, puntuació 0.
+                    pasosDelPatroCompletats = 0
+        return pasosDelPatroCompletats / len(patro)
+
+    #Retorna true si existeix un cuatre en ratlla del nostre jugador o quan el tauler està plé.
+    def es_meta(self,jugador):
+        if(self.calc_score(jugador) == 4):
+            return True
+        hiHaEspaisLliures = False
+        for fila in self.tauler:
+            if(TipusCasella.LLIURE in fila):
+                hiHaEspaisLliures = True
+        if(not hiHaEspaisLliures):
+            return True
         else:
-            return ai_points
-            
-    def is_full(self, taulell):
-        for i in range(len(taulell)):
-            for j in range(len(taulell[i])):
-                if taulell[i][j] == TipusCasella.LLIURE:
-                    return False
-        return True    
-         
-    def is_done(self, taulell, score : int):
-        return self.is_full(taulell) or score >= self.maxScore or score <= self.minScore
-    
-    def clone(self, taulell):
-        cloned_board = [[cell for cell in row] for row in taulell]
-        return cloned_board
-    
-    def place(self, taulell, col, is_max) -> bool:
-        if taulell[col][0] == TipusCasella.LLIURE and 0 <= col < self.mida[1]:
-            for j in range(self.mida[0] -1, -1, -1):
-                if taulell[col][j] is TipusCasella.LLIURE:
-                    taulell[col][j] = TipusCasella.CARA if is_max else TipusCasella.CREU
-                    return True                  
-        return False
-    
-    def minimax(self, is_max, depth, alpha, beta) -> Tuple:
-        score = self.calc_score(self.taulell)
+            return False
+
+    #Retorna True si una posicio esta ocupada, false si no esta ocupada i false també si la posicio esta
+    #fora del tauler
+    def _estaOcupatPerJugador(self,fila,columna,jugador):
+        #Suposam que el tauler es sempre un quadrat
+        if fila < 0 or columna < 0 or fila > len(self.tauler)-1 or columna > len(self.tauler)-1:
+            return False
+        else :
+            return self.tauler[fila][columna] == jugador
         
-        if self.is_done(self.taulell, score) or depth == 0:
-            return (-1, score)
-        tmp = None
-        
-        if is_max:
-            max_val = (-1, float('-inf'))
-            for col in range(self.mida[1]):
-                tmp_taulell = self.clone(self.taulell)
-                if self.place(tmp_taulell, col, True):
-                    value = self.minimax(False, depth - 1, alpha, beta)
-                    print(value )
-                    if value[1] > max_val[1]:
-                        tmp = (col, value[1])
-                    alpha = max(alpha, value[1])
-                    if beta <= alpha:
-                        break
-            return tmp
-        else:
-            min_val = (-1, float('inf'))            
-            for col in range(self.mida[1]):
-                tmp_taulell = self.clone(self.taulell)
-                if self.place(tmp_taulell, col, False):
-                    value = self.minimax(True, depth - 1, alpha, beta)
-                    print(value)
-                    if value[1] < min_val[1]:
-                        tmp = (col, value[1])
-                    beta = min(beta, value[1])
-                    if beta <= alpha:
-                        break
-            return tmp
+    def genera_fill(self,jugador):
+        fills = []
+        for fila in range(len(self.tauler)):
+            for columna in (range(len(self.tauler[0]))):
+                if(self.tauler[fila][columna] == TipusCasella.LLIURE):
+                    nouTauler = deepcopy(self.tauler)
+                    nouAccionsPrevies = deepcopy(self.accions_previes)
+                    nouTauler[fila][columna] = jugador
+                    nouAccionsPrevies.append((Accio.POSAR,(fila,columna)))
+                    fills.append(EstatMiniMax(nouTauler,nouAccionsPrevies)) 
+        return fills
 
-    def minimax_decision(self, depth=8):
-        best_move = self.minimax(True, depth, float('-inf'), float('inf'))
-        return best_move
 
-    def calc_score(self, taulell):
-        vScore = 0
-        hScore = 0
-        ddScore = 0
-        adScore = 0
-        total_score = 0
 
-        for row in range(self.mida[0] - 3):
-            for col in range(self.mida[1]):
-                tmp = self.calc_score_position(row, col, 1, 0, taulell)
-                vScore += tmp
-                if tmp >= self.maxScore or tmp <= self.minScore:
-                    return tmp
 
-        for row in range(self.mida[0]):
-            for col in range(self.mida[1] - 3):
-                tmp = self.calc_score_position(row, col, 0, 1, taulell)
-                hScore += tmp
-                if tmp >= self.maxScore or tmp <= self.minScore:
-                    return tmp
-
-        for row in range(self.mida[0] - 3):
-            for col in range(self.mida[1] - 3):
-                tmp = self.calc_score_position(row, col, 1, 1, taulell)
-                ddScore += tmp
-                if tmp >= self.maxScore or tmp <= self.minScore:
-                    return tmp
-        
-        for row in range(3, self.mida[0]):
-            for col in range(self.mida[1] - 4):
-                tmp = self.calc_score_position(row, col, -1, 1, taulell)
-                adScore += tmp
-                if tmp >= self.maxScore or tmp <= self.minScore:
-                    return tmp
-        
-        total_score = vScore + hScore + ddScore + adScore
-        return total_score     
-   
 class Agent(joc.Agent):
-    def __init__(self, nom):
+    def __init__(self,nom,jugador):
+        self.jugador = jugador
+        self.primeraExecucio = True       
+        self.__ACCIONSPERFER = [
+            (Accio.POSAR,(3,5)),
+            (Accio.POSAR,(4,4)),
+            (Accio.POSAR,(5,3)),
+            (Accio.POSAR,(6,2))
+        ]
+        self.prova = 0
+        self.numACCIONSFETES = 0
         super(Agent, self).__init__(nom)
-        self.a = True
 
     def pinta(self, display):
         pass
-
-    def actua(
-        self, percepcio: entorn.Percepcio
-    ) -> entorn.Accio | Tuple[entorn.Accio, object]:
-        estat_actual = Estat( 
-            taulell=percepcio[SENSOR.TAULELL],   
-            mida=percepcio[SENSOR.MIDA]        
-        )
+ 
+    def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:
+        estat = self.minimax(EstatMiniMax(percepcio[SENSOR.TAULELL]),float("-inf"),float("+inf"),True,2)
+        return estat.accions_previes.pop()
         
-        value = estat_actual.calc_score(percepcio[SENSOR.TAULELL])
-        if value == estat_actual.maxScore or value == estat_actual.minScore:
-            return Accio.ESPERAR
+        
+    def minimax(self,estat,alpha,beta,torn_de_max,profunditat):
+        if(estat.es_meta(self.jugador) or profunditat == 0):
+            return estat
         else:
-            millor_accio = estat_actual.minimax_decision()
-            print(millor_accio)
-            return Accio.POSAR, millor_accio  
+            fills = estat.genera_fill(self.jugador)
+            if(torn_de_max):
+                maxim = self.minimax(fills[0],alpha,beta,not torn_de_max,profunditat -1)
+                for estat_fill in fills:
+                    recursiu = self.minimax(estat_fill,alpha,beta,not torn_de_max,profunditat -1)
+                    if maxim.calc_score(self.jugador) < recursiu.calc_score(self.jugador):
+                        maxim = recursiu
+                    alpha = max(alpha,recursiu.calc_score(self.jugador))
+                    if(beta <= alpha):
+                        break
+                return maxim
+            else:
+                minim = self.minimax(fills[0],alpha,beta,not torn_de_max,profunditat -1)
+                for estat_fill in fills:
+                    recursiu = self.minimax(estat_fill,alpha,beta,not torn_de_max,profunditat -1)
+                    if(minim.calc_score(self.jugador) > recursiu.calc_score(self.jugador)):
+                        minim = recursiu
+                    beta = min(beta,recursiu.calc_score(self.jugador))
+                    if(beta <= alpha):
+                        break
+                return minim
+    
