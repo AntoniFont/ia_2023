@@ -112,9 +112,13 @@ class Estat():
     def __lt__(self, altre):
         return self.f()<altre.f()
     
-    def f(self):
-        return self.heuristica + len(self.accions_previes)
+    def pes(self):
+        return len(self.accions_previes)
     
+    def f(self):
+        return self.heuristica + self.pes()
+    
+
 
 class Agent(joc.Agent):
     def __init__(self, nom):
