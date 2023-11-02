@@ -137,7 +137,7 @@ class Agent(joc.Agent):
         self.__tancats = []
         while len(self.__oberts) != 0:
             estatActual = self.__oberts.pop(0)
-            if(estatActual.es_meta()):
+            if(estatActual.es_meta(self.jugador)):
                 print(estatActual.tauler)
                 self.__accions = estatActual.accions_previes
                 self.__tancats.append(estatActual)
