@@ -118,8 +118,27 @@ class Estat():
     def f(self):
         return self.heuristica + self.pes()
     
-
-
+class CoaPrioridad(PriorityQueue):
+    def __init__(self):
+        super(CoaPrioridad,self).__init__()
+    
+    def contains(self,elem):
+        for i in range(super().qsize()):
+            elemeLlista = self.getSenseTreure(i)
+            if (elem == elemeLlista):
+                return elemeLlista
+                        
+    def getSenseTreure(self,index):
+        eleme = super().get(index)
+        super().put(eleme)
+        return eleme
+    
+    def put(self,elem):
+        super().put(elem)
+    
+    def get(self,elem):
+        return super().get(elem)
+    
 class Agent(joc.Agent):
     def __init__(self, nom):
         self.__oberts = PriorityQueue()
@@ -146,18 +165,25 @@ class Agent(joc.Agent):
                 return Accio.ESPERAR
         
     def cerca(self,estatInicial):
-        self.__oberts = PriorityQueue()
+        self.__oberts = CoaPrioridad()
+        self.__oberts.put(estatInicial)
         self.__tancats = []
         while not self.__oberts.empty():
-            a, estatActual = self.__oberts.pop(0)
+            estatActual = self.__oberts.get(0)
+            self.__tancats.append(estatActual)
             if(estatActual.es_meta()):
                 self.__accions = estatActual.accions_previes
-                self.__tancats.append(estatActual)
                 return True
             else:
                 fills = estatActual.genera_fill()
-                self.__tancats.append(estatActual)
                 #Nomes els fills que encara no hem visitat           
                 for fill in fills:
-                    self.__oberts.put( fill.f() ,fill)
+                    if(fill in self.__tancats):
+                        break
+                    if(self.__oberts.contains(fill)):
+                        primer = self.__oberts.getSenseTreure()
+                        if(fill.pes() > primer): #Podria ser el darrer, no ho sabem
+                            break
+                    
+                    self.__oberts.put(fill)
         return False
