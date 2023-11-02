@@ -9,7 +9,7 @@ from ia_2022 import entorn
 from practica1 import joc
 from practica1.entorn import Accio,SENSOR,TipusCasella
 from copy import deepcopy
-
+import time
 
 class Estat():
 
@@ -154,9 +154,12 @@ class Agent(joc.Agent):
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:        
         if(self.primeraExecucio == True):
             self.primeraExecucio = False
+            startTime = time.time()
             self.cerca(Estat(
                 percepcio[SENSOR.TAULELL]
                 ))
+            endTime = time.time()
+            print("Duracio a* (segons): ", endTime-startTime)
             return Accio.ESPERAR
         else:
             if(len(self.__accions)!=0):

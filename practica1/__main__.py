@@ -13,7 +13,7 @@ def main():
     #PROFUNDITAT
     #quatre = joc.Taulell([agentProfunditat.Agent("Miquel")])
     #A STAR
-    #quatre = joc.Taulell([agentAstar.Agent("Miquel")])
+    quatre = joc.Taulell([agentAstar.Agent("Miquel")])
     
 
 

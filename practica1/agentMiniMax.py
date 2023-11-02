@@ -9,6 +9,7 @@ from ia_2022 import entorn
 from practica1 import joc
 from practica1.entorn import Accio,SENSOR,TipusCasella
 from copy import deepcopy
+import time 
 
 class EstatMiniMax():
 
@@ -125,7 +126,10 @@ class Agent(joc.Agent):
         pass
  
     def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:
+        startTime = time.time()
         estat = self.minimax(EstatMiniMax(percepcio[SENSOR.TAULELL]),float("-inf"),float("+inf"),True,2)
+        endTime = time.time()
+        print("Duracio minimax (segons): ", endTime-startTime)
         return estat.accions_previes.pop()
         
         
