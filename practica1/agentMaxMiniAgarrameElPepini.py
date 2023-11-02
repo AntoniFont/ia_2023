@@ -15,7 +15,7 @@ class EstatMaxMini():
     def __init__(self,tauler,accionsPrevies = []):
         self.tauler = tauler
         self.accions_previes = accionsPrevies
-    
+
     #Cerca per tot el tauler i retorna la ratlla amb posibilitats de ser completada
     #mes gran que hi hagi del jugador seleccionat 
     #Una ratlla de 3, ex:(x x x o) que mai pugi ser completada contará com a 0.
@@ -124,47 +124,34 @@ class Agent(joc.Agent):
     def pinta(self, display):
         pass
  
-    def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:        
-        if(self.primeraExecucio):
-            estat,score = self.minimax(EstatMaxMini(percepcio[SENSOR.TAULELL]),float("-inf"),float("+inf"),True)
-            print(estat)
-            print(score)
-            self.primeraExecucio = False
+    def actua(self, percepcio: entorn.Percepcio) -> entorn.Accio | tuple[entorn.Accio, object]:
+        estat = self.minimax(EstatMaxMini(percepcio[SENSOR.TAULELL]),float("-inf"),float("+inf"),True,2)
+        return estat.accions_previes.pop()
         
-        if(self.numACCIONSFETES > len(self.__ACCIONSPERFER) - 1):
-            return Accio.ESPERAR
-        else:
-            accio = self.__ACCIONSPERFER[self.numACCIONSFETES]
-            self.numACCIONSFETES = self.numACCIONSFETES + 1
-        return accio
         
-    def minimax(self,estat,alpha,beta,torn_de_max):
-        if(self.prova % 1000 == 0):
-            print("minmax",self.prova)
-        self.prova = self.prova + 1
-        if(estat.es_meta(self.jugador)):
-            return estat.calc_score(self.jugador)
+    def minimax(self,estat,alpha,beta,torn_de_max,profunditat):
+        if(estat.es_meta(self.jugador) or profunditat == 0):
+            return estat
         else:
             fills = estat.genera_fill(self.jugador)
             if(torn_de_max):
-                maxim = float("-inf")
+                maxim = self.minimax(fills[0],alpha,beta,not torn_de_max,profunditat -1)
                 for estat_fill in fills:
-                    recursiu = self.minimax(estat_fill,alpha,beta,not torn_de_max)
-                    maxim = max(maxim,recursiu)
-                    alpha = max(alpha,recursiu)
+                    recursiu = self.minimax(estat_fill,alpha,beta,not torn_de_max,profunditat -1)
+                    if maxim.calc_score(self.jugador) < recursiu.calc_score(self.jugador):
+                        maxim = recursiu
+                    alpha = max(alpha,recursiu.calc_score(self.jugador))
                     if(beta <= alpha):
                         break
                 return maxim
             else:
-                minim = float("+inf")
+                minim = self.minimax(fills[0],alpha,beta,not torn_de_max,profunditat -1)
                 for estat_fill in fills:
-                    recursiu = self.minimax(estat_fill,alpha,beta,not torn_de_max)
-                    minim = min(minim,recursiu)
-                    beta = min(beta,recursiu)
+                    recursiu = self.minimax(estat_fill,alpha,beta,not torn_de_max,profunditat -1)
+                    if(minim.calc_score(self.jugador) > recursiu.calc_score(self.jugador)):
+                        minim = recursiu
+                    beta = min(beta,recursiu.calc_score(self.jugador))
                     if(beta <= alpha):
                         break
                 return minim
-    def evaluar(self,estat):
-        if estat.es_meta(self.jugador):
-            return estat.calc_score(self.jugador)
-
+    
