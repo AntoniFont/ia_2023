@@ -12,10 +12,9 @@ from copy import deepcopy
 
 class Estat():
 
-    def __init__(self, tauler, pes, accionsPrevies = []):
+    def __init__(self, tauler, accionsPrevies = []):
         self.tauler = tauler
         self.accions_previes = accionsPrevies
-        self._pes = pes
         self.heuristica = self.calcul_heuristica() if accionsPrevies else 1000
         
     #Retorna true si existeix un cuatre en ratlla del nostre jugador.
@@ -106,11 +105,11 @@ class Estat():
                     nouAccionsPrevies = deepcopy(self.accions_previes)
                     nouTauler[fila][columna] = TipusCasella.CARA
                     nouAccionsPrevies.append((Accio.POSAR,(fila,columna)))
-                    fills.append(Estat(nouTauler, self._pes+1, nouAccionsPrevies)) 
+                    fills.append(Estat(nouTauler, nouAccionsPrevies)) 
         return fills
     
     def pes(self):
-        return self.heuristica + self._pes
+        return self.heuristica + len(self.accions_previes)
     
 
 class Agent(joc.Agent):
@@ -128,8 +127,7 @@ class Agent(joc.Agent):
         if(self.primeraExecucio == True):
             self.primeraExecucio = False
             self.cerca(Estat(
-                percepcio[SENSOR.TAULELL],
-                0
+                percepcio[SENSOR.TAULELL]
                 ))
             return Accio.ESPERAR
         else:
