@@ -182,7 +182,7 @@ class Agent(joc.Agent):
                         break
                     if(self.__oberts.contains(fill)):
                         primer = self.__oberts.getSenseTreure()
-                        if(fill.pes() > primer): #Podria ser el darrer, no ho sabem
+                        if(fill.pes() > primer): 
                             break
                     
                     self.__oberts.put(fill)
